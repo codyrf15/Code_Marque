@@ -1,209 +1,252 @@
-# CodeMarque AI Bot - Advanced Discord AI Assistant
+# 🛡️ CodeMarque AI Bot
 
-This Discord bot leverages the Anthropic Claude and Google Gemini APIs to deliver dynamic conversational experiences. Powered by Anthropic's advanced Claude models and Google's robust Gemini language models, the bot can respond to user messages, maintain conversation history, and execute various commands. It also offers engaging interactions with diverse personas, tailored by the selected model and prompt.
+> **Professional AI-Powered Discord Assistant with Military-Grade Precision**
 
-## Features
+CodeMarque AI Bot is a sophisticated Discord assistant engineered for professional environments. Built with enterprise-grade AI models from Anthropic Claude and Google Gemini, it delivers strategic intelligence and tactical support through advanced conversational AI.
 
-- Responds to user messages using the Anthropic API (Claude models) and Google Generative AI
-- Maintains conversation history for each user
-- Supports slash commands for user interactions
-- Clears conversation history using the `/clear` command
-- Saves conversation and sends it to the user's inbox using the `/save` command
-- Changes the model used by the bot using the `/model` command
-- Changes the system prompt used by the bot using the `/prompt` command
-- Resets the model and prompt to the default settings using the `/reset` command
-- Displays the list of available commands and their usage using the `/help` command
-- Triggers a test error to check the error notification webhook using the `/testerror` command (restricted to the bot owner)
-- Displays the user's current model and prompt settings using the `/settings` command
-- Automatically changes the bot's presence status with various activities
-- Engages users with different personas based on the selected model and prompt:
-  - CodeMarque: Military-themed AI assistant with professional responses
-  - Helpful Assistant: A caring and supportive AI assistant created by Anthropic
-  - JavaScript Developer: An experienced JavaScript developer with expertise in modern web development technologies
-  - Python Developer: A skilled Python developer with a passion for building efficient and scalable applications
-- Implements rate limiting for user requests and API calls to prevent abuse and ensure fair usage
-- Handles errors gracefully and sends error notifications via Discord webhook
-- Logs errors to files for debugging and monitoring purposes
-- Includes a comprehensive test suite using Jest for ensuring code quality and reliability
-- Utilizes Upstash Redis for storing and managing allowed channel IDs
-- Provides an API endpoint to add or remove allowed channel IDs dynamically
-- Optimizes the implementation to reduce Redis queries and improve performance
-- Protects the API endpoint with API key-based authentication to prevent unauthorized access
+---
 
-This project is under active development, and I may introduce breaking changes or new features in future updates based on my evolving use case and requirements.
+## 🏆 **Credits & Acknowledgments**
 
-**Enjoy interacting with the Discord bot and exploring its various capabilities!**
+This project builds upon the exceptional foundation created by **Mark Anthony Llego** ([@llegomark](https://github.com/llegomark)). 
 
-## Screenshots
+**Original Repository:** [discord-bot-claude-gemini](https://github.com/llegomark/discord-bot-claude-gemini)
 
-![Screenshot](screenshots/Screenshot1.png)
-![Screenshot](screenshots/Screenshot2.png)
-![Screenshot](screenshots/Screenshot3.png)
-![Screenshot](screenshots/Screenshot4.png)
-![Screenshot](screenshots/Screenshot5.png)
-![Screenshot](screenshots/Screenshot6.png)
-![Screenshot](screenshots/Screenshot7.png)
-![Screenshot](screenshots/Screenshot8.png)
-![Screenshot](screenshots/Screenshot9.png)
-![Screenshot](screenshots/Screenshot10.png)
-![Screenshot](screenshots/Screenshot11.png)
+We extend our sincere gratitude to Mark for:
+- ✨ Creating the original architectural framework
+- 🔧 Establishing the core Discord.js integration patterns  
+- 🚀 Pioneering the multi-AI model approach (Claude + Gemini)
+- 📚 Providing comprehensive documentation and examples
 
-## Discord Bot Setup Guide
+CodeMarque AI Bot represents an evolution of this foundation, customized for enterprise and professional use cases with enhanced security, branding, and operational features.
 
-This guide will walk you through the process of setting up and running the Neko Discord Bot on your own server.
+---
 
-**Requirements:**
+## 🎯 **Mission Statement**
 
-- Node.js and npm (or yarn) installed on your system.
-- A Discord account and a server where you have administrator permissions.
-- An Anthropic API key with access to the Claude models.
-- A Google API key with access to the Google Generative AI API.
-- An Upstash Redis database for storing allowed channel IDs.
+CodeMarque AI Bot serves as your digital command center, providing:
+- **Strategic AI Consultation** through Claude's advanced reasoning
+- **Rapid Intelligence Gathering** via Gemini's swift processing
+- **Secure Communication Channels** with enterprise-grade authentication
+- **Mission-Critical Reliability** with comprehensive error handling
 
-**Steps:**
+---
 
-1. **Clone the Repository:**
+## ⚡ **Core Capabilities**
 
-   - Open a terminal or command prompt and navigate to the directory where you want to store the bot's files.
-   - Clone the repository using git:
+### 🤖 **AI Command & Control**
+- **Multi-Model Intelligence**: Seamlessly switch between Claude and Gemini models
+- **Tactical Personas**: Deploy specialized AI agents for different mission requirements
+  - 🎖️ **CodeMarque Agent**: Military-themed professional assistant  
+  - 🛠️ **Technical Specialist**: JavaScript/Python development expert
+  - 🤝 **Support Operator**: General assistance and guidance
+- **Conversation Intelligence**: Maintains operational context and memory
 
+### 🔐 **Security & Operations**
+- **Channel Authorization**: Redis-based access control system
+- **API Authentication**: Secured endpoints with key-based protection
+- **Rate Limiting**: Anti-abuse protection for sustained operations
+- **Error Intelligence**: Webhook notifications with detailed reporting
+- **Activity Monitoring**: Real-time status and performance tracking
+
+### 📡 **Command Interface**
+| Command | Function | Access Level |
+|---------|----------|-------------|
+| `/help` | Display operational manual | All Users |
+| `/settings` | Show current configuration | All Users |
+| `/clear` | Purge conversation history | All Users |
+| `/save` | Archive conversation to DM | All Users |
+| `/model` | Switch AI model | All Users |
+| `/prompt` | Change AI persona | All Users |
+| `/reset` | Restore default settings | All Users |
+| `/testerror` | Diagnostic error test | Owner Only |
+
+### 🏗️ **Infrastructure & Architecture**
+- **Production-Ready**: Optimized for 24/7 deployment
+- **Test Coverage**: Comprehensive Jest testing suite
+- **Express Backend**: RESTful API for channel management
+- **Redis Integration**: High-performance data persistence
+- **Rate Management**: Intelligent throttling and queue systems
+
+---
+
+## 🚀 **Deployment Guide**
+
+### **Prerequisites**
+- **Node.js** (v18+ recommended)
+- **Discord Bot Token** ([Discord Developer Portal](https://discord.com/developers/applications))
+- **Anthropic API Key** ([Anthropic Console](https://console.anthropic.com/))
+- **Google AI API Key** ([Google AI Studio](https://aistudio.google.com/))
+- **Upstash Redis** ([Upstash Console](https://console.upstash.com/))
+
+### **Quick Start**
+
+1. **Repository Setup**
    ```bash
-   git clone https://github.com/llegomark/discord-bot-claude-gemini.git
-   ```
-
-   - Navigate to the newly created directory:
-
-   ```bash
+   git clone https://github.com/codyrf15/discord-bot-claude-gemini.git
    cd discord-bot-claude-gemini
-   ```
-
-2. **Install Dependencies:**
-
-   - Install the required dependencies using npm or yarn:
-
-   ```bash
    npm install
    ```
 
-   or
+2. **Environment Configuration**
+   
+   Create `.env` file with your credentials:
+   ```env
+   DISCORD_BOT_TOKEN=your-bot-token
+   DISCORD_CLIENT_ID=your-client-id
+   ANTHROPIC_API_KEY=your-anthropic-key
+   GOOGLE_API_KEY_1=your-google-key-here
+   UPSTASH_REDIS_URL=your-redis-url
+   UPSTASH_REDIS_TOKEN=your-redis-token
+   PORT=3000
+   ```
 
+3. **Discord Integration**
    ```bash
-   yarn install
-   ```
-
-3. **Set up Environment Variables:**
-
-   - Create a file named `.env` in the project's root directory.
-   - Add the following environment variables to the file, replacing the placeholders with your actual values:
-
-   ```
-   DISCORD_BOT_TOKEN=YOUR_DISCORD_BOT_TOKEN
-   ANTHROPIC_API_KEY=YOUR_ANTHROPIC_API_KEY
-   GOOGLE_API_KEY_1=YOUR_GOOGLE_API_KEY_1
-   GOOGLE_API_KEY_2=YOUR_GOOGLE_API_KEY_2
-   GOOGLE_API_KEY_3=YOUR_GOOGLE_API_KEY_3
-   GOOGLE_API_KEY_4=YOUR_GOOGLE_API_KEY_4
-   GOOGLE_API_KEY_5=YOUR_GOOGLE_API_KEY_5
-   GOOGLE_MODEL_NAME=YOUR_GOOGLE_MODEL_NAME
-   DISCORD_CLIENT_ID=YOUR_DISCORD_CLIENT_ID
-   DISCORD_USER_ID=YOUR_DISCORD_USER_ID
-   ERROR_NOTIFICATION_WEBHOOK=YOUR_ERROR_NOTIFICATION_WEBHOOK_URL
-   CONVERSATION_INACTIVITY_DURATION=INACTIVITY_DURATION_IN_MILLISECONDS
-   CLOUDFLARE_AI_GATEWAY_URL=YOUR_CLOUDFLARE_AI_GATEWAY_URL
-   PORT=YOUR_DESIRED_PORT_NUMBER
-   UPSTASH_REDIS_URL=YOUR_UPSTASH_REDIS_URL
-   UPSTASH_REDIS_TOKEN=YOUR_UPSTASH_REDIS_TOKEN
-   API_KEY=YOUR_API_KEY
-   ```
-
-   - You can obtain your Discord bot token from the [Discord Developer Portal](https://discord.com/developers/docs/intro).
-   - The Anthropic API key can be obtained from the [Anthropic Console](https://console.anthropic.com/).
-   - The Google API keys can be obtained from the [Google AI Studio](https://aistudio.google.com/app/).
-   - Replace `YOUR_DISCORD_USER_ID` with your Discord user ID to restrict the `/testerror` command to the bot owner.
-   - Set the `CONVERSATION_INACTIVITY_DURATION` to the desired duration in milliseconds after which inactive conversations will be cleared (default: 3 hours).
-   - If you're using Cloudflare AI Gateway for enhanced privacy and security, provide the URL in the `CLOUDFLARE_AI_GATEWAY_URL` variable.
-   - Set the `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` variables with your Upstash Redis database URL and token.
-   - Generate a unique API key for the API endpoint and set it in the `API_KEY` variable.
-
-4. **Deploy Slash Commands:**
-
-   - Run the following command to deploy the slash commands to your Discord server:
-
-   ```bash
+   # Deploy slash commands to Discord
    node src/deploy-commands.js
-   ```
-
-5. **Start the Bot:**
-   - In the terminal, run the following command to start the bot:
-   ```bash
+   
+   # Launch the bot
    npm start
    ```
-   or
-   ```bash
-   yarn start
-   ```
-   - The bot will connect to Discord and be ready to interact with users.
 
-**Interacting with the Bot:**
+### **Channel Authorization**
 
-- **Seamless Conversation:** To chat directly with the bot, ensure you are in a channel where the bot has appropriate permissions and the channel ID is included in the allowed list. Once set up, simply send your message in the channel, and the bot will respond accordingly without needing a mention.
-- **Slash Commands:** Use the available slash commands to interact with the bot and perform various actions.
-
-**Managing Allowed Channel IDs:**
-
-- To add or remove allowed channel IDs, make a POST request to the `/api/allowedChannels` endpoint with the following JSON payload:
-  ```json
-  {
-    "channelId": "CHANNEL_ID",
-    "action": "add" or "remove"
-  }
-  ```
-- Include the API key in the request headers using the `X-API-Key` header.
-- Example cURL command to add a channel ID:
-  ```bash
-  curl -X POST -H "Content-Type: application/json" -H "X-API-Key: YOUR_API_KEY" -d '{"channelId": "1234567890", "action": "add"}' http://localhost:4000/api/allowedChannels
-  ```
-
-**Additional Notes:**
-
-- You can customize the bot's behavior and responses by modifying the code in the `src` folder.
-- The `errorHandler.js` file contains error handling logic, including sending error notifications via Discord webhook and logging errors to files.
-- Make sure to keep your API keys, bot token, and Upstash Redis credentials secure. Do not share them publicly.
-- Refer to the [Discord.js documentation](https://discord.js.org/docs/packages/discord.js/14.14.1), [Anthropic API documentation](https://docs.anthropic.com/claude/docs/intro-to-claude), and [Google Gemini API documentation](https://ai.google.dev/docs) for more information on the available features and options.
-
-## Running Tests
-
-The project includes a comprehensive test suite using Jest. To run the tests, use the following command:
-
+Configure authorized channels via API:
 ```bash
+curl -X POST http://localhost:3000/api/allowedChannels \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{"channelId": "CHANNEL_ID", "action": "add"}'
+```
+
+---
+
+## 🛠️ **Development & Testing**
+
+### **Quality Assurance**
+```bash
+# Run test suite
 npm test
+
+# Code linting
+npm run lint
+
+# Start development server
+npm start
 ```
 
-or
-
-```bash
-yarn test
+### **Architecture Overview**
+```
+src/
+├── index.js              # Main application entry
+├── config.js             # Configuration management
+├── conversationManager.js # AI conversation logic
+├── commandHandler.js     # Slash command processing
+├── messageCreateHandler.js # Message event handling
+├── interactionCreateHandler.js # Interaction management
+├── errorHandler.js       # Error reporting system
+├── redisClient.js        # Redis connection
+├── channelRoutes.js      # API route handlers
+├── functionTools.js      # Utility functions
+├── helpCommand.js        # Help system
+└── deploy-commands.js    # Discord command deployment
 ```
 
-The test results will be displayed in the console, showing the number of passed and failed tests, as well as the test coverage report.
+---
 
-## Frequently Asked Questions (FAQ)
+## 🔒 **Security Features**
 
-**Q: Do you have plans to integrate the OpenAI API?**
-A: No, I currently have no plans to integrate the OpenAI API. The responses from Claude and Gemini are excellent for my use case, and I've been very satisfied with their performance since the release of Claude 3.
+- **🛡️ API Key Protection**: All endpoints secured with authentication
+- **⚡ Rate Limiting**: Prevents abuse and ensures stability  
+- **🔐 Environment Isolation**: Sensitive data in `.env` files only
+- **📊 Error Reporting**: Webhook notifications for critical issues
+- **🚫 Channel Restrictions**: Redis-based access control
 
-**Q: What about Gemini 1.5 Pro API?**
-A: I already have access to the Google Gemini 1.5 Pro model, and I plan to integrate it into the Discord bot as soon as the API access becomes publicly available and exits the beta stage.
+---
 
-**Q: How can I host this Discord bot?**
-A: The README file provides a comprehensive setup guide for hosting the bot on your own server. If you require assistance with installation and setup, I offer bot hosting services for a small fee. Please contact me directly for more information.
+## 📈 **Performance & Monitoring**
 
-**Note:** These are some of the frequently asked questions I receive via Discord. If you have any other questions or need further clarification, feel free to reach out to me directly.
+- **Response Time Optimization**: Sub-second AI model switching
+- **Memory Management**: Efficient conversation caching
+- **Error Recovery**: Automatic fallback systems
+- **Status Reporting**: Real-time operational metrics
+- **Load Balancing**: Multiple Google API key rotation
 
-## Contributing
+---
 
-Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
+## 🌐 **Production Deployment**
 
-## License
+### **Replit Deployment**
+1. Import repository from GitHub
+2. Configure environment variables in Secrets
+3. Run `npm install && npm start`
 
-This project is licensed under the [MIT License](LICENSE).
+### **VPS/Cloud Deployment**
+- Supports Docker containerization
+- PM2 process management recommended
+- NGINX reverse proxy compatible
+- SSL/TLS ready for secure connections
+
+---
+
+## 📝 **Configuration Reference**
+
+<details>
+<summary>Complete Environment Variables</summary>
+
+```env
+# Discord Configuration
+DISCORD_BOT_TOKEN=your-bot-token
+DISCORD_CLIENT_ID=your-client-id
+DISCORD_USER_ID=your-user-id
+
+# AI Service APIs
+ANTHROPIC_API_KEY=your-anthropic-key
+GOOGLE_API_KEY_1=your-google-key-1
+GOOGLE_API_KEY_2=your-google-key-2
+GOOGLE_API_KEY_3=your-google-key-3
+
+# Database & Storage
+UPSTASH_REDIS_URL=your-redis-url
+UPSTASH_REDIS_TOKEN=your-redis-token
+
+# Application Settings
+PORT=3000
+API_KEY=your-api-key
+CONVERSATION_INACTIVITY_DURATION=600000
+
+# Optional Integrations
+ERROR_NOTIFICATION_WEBHOOK=your-webhook-url
+CLOUDFLARE_AI_GATEWAY_URL=your-gateway-url
+```
+</details>
+
+---
+
+## 🤝 **Contributing**
+
+We welcome contributions that enhance CodeMarque AI Bot's capabilities:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/enhancement`)
+3. Commit changes (`git commit -m 'Add new capability'`)
+4. Push to branch (`git push origin feature/enhancement`)
+5. Open a Pull Request
+
+---
+
+## 📄 **License**
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🛡️ **CodeMarque AI Bot** 
+*Professional Discord AI Assistant • Built for Enterprise • Powered by Claude & Gemini*
+
+**Repository**: [github.com/codyrf15/discord-bot-claude-gemini](https://github.com/codyrf15/discord-bot-claude-gemini)
+
+---
+
+*Based on the original work by Mark Anthony Llego - Thank you for the incredible foundation! 🙏*

@@ -10,9 +10,9 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/llegomark/discord-bot-neko.git"
+		"url": "https://github.com/codyrf15/discord-bot-claude-gemini.git"
 	},
-	"author": "Mark Anthony Llego",
+	"author": "Cody",
 	"license": "MIT",
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.53.0",
