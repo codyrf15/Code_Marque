@@ -667,9 +667,51 @@ app.get('/', (_req, res) => {
 	res.send('CodeMarque AI Bot is running!');
 });
 
+// Health check endpoint
+app.get('/health', (_req, res) => {
+	res.json({
+		status: 'online',
+		timestamp: new Date().toISOString(),
+		uptime: process.uptime(),
+		memory: process.memoryUsage()
+	});
+});
+
+// Keep-alive ping endpoint
+app.get('/ping', (_req, res) => {
+	res.json({ 
+		pong: true, 
+		time: Date.now(),
+		status: client.isReady() ? 'connected' : 'disconnected'
+	});
+});
+
 app.listen(port, () => {
 	console.log(`CodeMarque AI Bot is listening on port ${port}`);
 });
+
+// Self-ping to prevent sleeping (for free Replit accounts)
+if (process.env.REPLIT_DEPLOYMENT_ID || process.env.REPL_SLUG) {
+	const keepAlive = () => {
+		const replitUrl = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+		
+		setInterval(async () => {
+			try {
+				const response = await fetch(`${replitUrl}/ping`);
+				const data = await response.json();
+				console.log(`[KEEP-ALIVE] Ping successful: ${data.pong ? 'PONG' : 'FAILED'}`);
+			} catch (error) {
+				console.log(`[KEEP-ALIVE] Ping failed: ${error.message}`);
+			}
+		}, 4 * 60 * 1000); // Ping every 4 minutes
+	};
+	
+	// Start keep-alive after bot is ready
+	client.once('ready', () => {
+		setTimeout(keepAlive, 30000); // Wait 30 seconds before starting
+		console.log('[KEEP-ALIVE] Self-ping system started');
+	});
+}
 
 // Start the Discord bot
 client.login(process.env.DISCORD_BOT_TOKEN);
