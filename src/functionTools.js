@@ -4,7 +4,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
+// const os = require('os'); // Reserved for future server info functions
 
 /**
  * Get current time and date
@@ -130,96 +130,186 @@ function analyzeText(text) {
 }
 
 /**
- * Generate Mermaid diagrams as PNG images
+ * Generate Mermaid diagrams as PNG images using Docker
  */
 function generateMermaidDiagram(mermaidCode, theme = 'default', backgroundColor = 'white', filename = null) {
-    // Generates a PNG image from Mermaid diagram syntax
+    // Generates a PNG image from Mermaid diagram syntax using Docker
     try {
-        // Check if we're in an environment that supports Chrome (like Docker/CI)
-        // First try to detect if Chrome dependencies are available
-        try {
-            execSync('which google-chrome-stable', { stdio: 'pipe' });
-        } catch {
-            try {
-                execSync('which chromium-browser', { stdio: 'pipe' });
-            } catch {
-                // No Chrome found, return a helpful message
-                return {
-                    success: false,
-                    error: 'Chrome/Chromium not available in this environment',
-                    inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
-                    troubleshooting: 'Mermaid diagram generation requires Chrome/Chromium. Install with: apt-get update && apt-get install -y chromium-browser, or use this feature in a Docker environment with Chrome support.',
-                    fallbackSuggestion: 'You can copy the Mermaid code and use online tools like https://mermaid.live for diagram generation.'
-                };
-            }
+        // Validate Mermaid code input
+        if (!mermaidCode || typeof mermaidCode !== 'string' || mermaidCode.trim().length === 0) {
+            return {
+                success: false,
+                error: 'Invalid or empty Mermaid code provided',
+                inputSyntax: mermaidCode ? mermaidCode.substring(0, 100) : 'undefined',
+                troubleshooting: 'Please provide valid Mermaid diagram syntax. Example: "graph TD\nA-->B"'
+            };
         }
-        
+
         // Create a temporary directory for diagram files
-        const tempDir = path.join(os.tmpdir(), 'mermaid-diagrams');
+        const tempDir = path.join(process.cwd(), 'temp', 'mermaid-diagrams');
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
         
         // Generate unique filename if not provided
         const timestamp = Date.now();
-        const diagramName = filename || `diagram_${timestamp}`;
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        const diagramName = filename || `diagram_${timestamp}_${randomSuffix}`;
         const inputFile = path.join(tempDir, `${diagramName}.mmd`);
         const outputFile = path.join(tempDir, `${diagramName}.png`);
         
         // Write Mermaid code to temporary file
         fs.writeFileSync(inputFile, mermaidCode, 'utf8');
         
-        // Build mmdc command with options, using system Chrome
-        let command = `npx mmdc -i "${inputFile}" -o "${outputFile}" --puppeteerConfig '{"executablePath": "/usr/bin/chromium-browser"}'`;
+        // Build Docker command using minlag/mermaid-cli
+        // Mount the temp directory and use Docker for isolated execution
+        const dockerCmd = [
+            'docker', 'run', '--rm',
+            '-u', `${process.getuid()}:${process.getgid()}`, // Use current user's UID/GID
+            '-v', `${tempDir}:/data`,
+            '--security-opt', 'seccomp=unconfined', // Required for Chrome in Docker
+            'minlag/mermaid-cli',
+            '-i', `/data/${diagramName}.mmd`,
+            '-o', `/data/${diagramName}.png`
+        ];
         
-        // Add theme if specified
+        // Add theme if specified and not default
         if (theme && theme !== 'default') {
-            command += ` -t ${theme}`;
+            dockerCmd.push('-t', theme);
         }
         
-        // Add background color if specified
+        // Add background color if specified and not white
         if (backgroundColor && backgroundColor !== 'white') {
-            command += ` -b ${backgroundColor}`;
+            dockerCmd.push('-b', backgroundColor);
         }
         
-        // Execute the mermaid CLI command
-        console.log(`Executing: ${command}`);
-        execSync(command, { stdio: 'pipe' });
+        console.log(`[Mermaid] Executing Docker command: ${dockerCmd.join(' ')}`);
+        
+        try {
+            // Execute the Docker command with timeout
+            execSync(dockerCmd.join(' '), { 
+                stdio: 'pipe',
+                timeout: 30000, // 30 second timeout
+                cwd: process.cwd()
+            });
+        } catch (dockerError) {
+            // Check if Docker is available
+            try {
+                execSync('docker --version', { stdio: 'pipe' });
+            } catch {
+                return {
+                    success: false,
+                    error: 'Docker not available in this environment',
+                    inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
+                    troubleshooting: 'Mermaid diagram generation requires Docker. Install Docker or use online tools like https://mermaid.live for diagram generation.',
+                    fallbackSuggestion: 'You can copy the Mermaid code and use https://mermaid.live to generate diagrams manually.'
+                };
+            }
+            
+            // Check if the Docker image exists
+            try {
+                execSync('docker image inspect minlag/mermaid-cli', { stdio: 'pipe' });
+            } catch {
+                // Try to pull the image
+                try {
+                    console.log('[Mermaid] Pulling minlag/mermaid-cli Docker image...');
+                    execSync('docker pull minlag/mermaid-cli', { stdio: 'pipe' });
+                    // Retry the original command
+                    execSync(dockerCmd.join(' '), { 
+                        stdio: 'pipe',
+                        timeout: 30000,
+                        cwd: process.cwd()
+                    });
+                } catch (pullError) {
+                    return {
+                        success: false,
+                        error: `Failed to pull Docker image: ${pullError.message}`,
+                        inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
+                        troubleshooting: 'Could not pull minlag/mermaid-cli Docker image. Check internet connection and Docker daemon status.'
+                    };
+                }
+            }
+            
+            // If we reach here, there was a different Docker execution error
+            throw dockerError;
+        }
         
         // Check if output file was created
         if (!fs.existsSync(outputFile)) {
-            throw new Error('Failed to generate diagram - output file not created');
+            // Cleanup input file
+            try { fs.unlinkSync(inputFile); } catch {}
+            
+            return {
+                success: false,
+                error: 'Failed to generate diagram - output file not created',
+                inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
+                troubleshooting: 'The Docker command executed but no PNG file was generated. Check Mermaid syntax for errors.',
+                fallbackSuggestion: 'Validate your Mermaid syntax at https://mermaid.live'
+            };
         }
         
-        // Get file stats
+        // Get file stats and read file for Discord attachment
         const stats = fs.statSync(outputFile);
+        const imageBuffer = fs.readFileSync(outputFile);
+        
+        // Cleanup temporary files
+        try {
+            fs.unlinkSync(inputFile);
+            // Note: Keep outputFile for now, it will be cleaned up later by Discord.js or a cleanup job
+        } catch (cleanupError) {
+            console.warn(`[Mermaid] Warning: Could not cleanup input file: ${cleanupError.message}`);
+        }
         
         return {
             success: true,
             imagePath: outputFile,
+            imageBuffer: imageBuffer, // For Discord.js AttachmentBuilder
             filename: `${diagramName}.png`,
             fileSize: stats.size,
             theme: theme,
             backgroundColor: backgroundColor,
-            inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : '')
+            inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
+            cleanup: () => {
+                // Cleanup function for later use
+                try {
+                    if (fs.existsSync(outputFile)) {
+                        fs.unlinkSync(outputFile);
+                    }
+                } catch (err) {
+                    console.warn(`[Mermaid] Warning: Could not cleanup output file: ${err.message}`);
+                }
+            }
         };
         
     } catch (error) {
-        console.error('Mermaid diagram generation error:', error);
+        console.error('[Mermaid] Diagram generation error:', error);
         
-        // Check if it's a Chrome-related error
-        const isChromeError = error.message.includes('Chrome') || 
-                             error.message.includes('libnss3') || 
-                             error.message.includes('browser process');
+        // Enhanced error categorization
+        let troubleshooting = 'Unknown error occurred during Mermaid diagram generation.';
+        
+        if (error.message.includes('timeout')) {
+            troubleshooting = 'Diagram generation timed out. Try simplifying the diagram or check system resources.';
+        } else if (error.message.includes('Chrome') || error.message.includes('chromium')) {
+            troubleshooting = 'Chrome/Chromium browser issue in Docker. Ensure the container has proper security permissions.';
+        } else if (error.message.includes('permission')) {
+            troubleshooting = 'File permission error. Check that the temp directory is writable and Docker has proper volume mount permissions.';
+        } else if (error.message.includes('ENOENT') || error.message.includes('command not found')) {
+            troubleshooting = 'Docker command not found. Install Docker or check PATH configuration.';
+        } else if (error.message.includes('syntax') || error.message.includes('parse')) {
+            troubleshooting = 'Invalid Mermaid syntax. Check diagram definition for syntax errors.';
+        }
         
         return {
             success: false,
             error: error.message,
-            inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
-            troubleshooting: isChromeError ? 
-                'Chrome dependencies missing. Install with: apt-get update && apt-get install -y chromium-browser libnss3 libatk-bridge2.0-0 libdrm2' :
-                'Check that the Mermaid syntax is valid. Common issues: missing diagram type declaration, invalid node connections, or unsupported diagram features.',
-            fallbackSuggestion: 'You can copy the Mermaid code and use online tools like https://mermaid.live for diagram generation.'
+            inputSyntax: mermaidCode ? mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : '') : 'undefined',
+            troubleshooting: troubleshooting,
+            fallbackSuggestion: 'You can copy the Mermaid code and use online tools like https://mermaid.live for diagram generation.',
+            errorDetails: {
+                name: error.name,
+                code: error.code,
+                signal: error.signal
+            }
         };
     }
 }
