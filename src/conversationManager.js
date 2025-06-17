@@ -107,9 +107,6 @@ class ConversationManager {
 					
 					finalResponse = result.text();
 				}
-			} else {
-				// Anthropic response
-				finalResponse = response.content[0].text;
 			}
 
 			// Check if we have Mermaid diagram function results
@@ -545,7 +542,25 @@ class ConversationManager {
 			"Copy that, soldier. Loading combat protocols... I mean, processing your request.",
 			"*checks ammo counter* Zero threats detected. Proceeding with data analysis.",
 			"Engaging digital warfare protocols. Your request is being processed with military precision.",
-			"*scans perimeter* All clear. Focusing processing power on your mission parameters."
+			"*scans perimeter* All clear. Focusing processing power on your mission parameters.",
+			"CodeMarque tactical systems online. Analyzing your request with Gemini 2.5 Flash processing power.",
+			"*activates HUD display* Mission parameters received. Deploying advanced AI capabilities.",
+			"Spartan neural interface engaged. Processing your request through enhanced tactical protocols.",
+			"*recalibrates targeting systems* Request acknowledged. Engaging strategic analysis mode.",
+			"Digital command center active. Your mission briefing is being processed with military efficiency.",
+			"*runs diagnostic check* All systems green. Proceeding with comprehensive tactical assessment.",
+			"CodeMarque AI protocols initiated. Standby for precision-engineered response deployment.",
+			"*synchronizes with Gemini 2.5 Flash* Advanced processing capabilities online. Analyzing your request.",
+			"Mission control to CodeMarque: Request received and understood. Deploying strategic response.",
+			"*activates enhanced sensors* Scanning request parameters. Tactical analysis in progress.",
+			"Digital warfare suite engaged. Your civilian request is being processed with military-grade precision.",
+			"*charges plasma rifle* Just kidding. Processing your request with advanced AI capabilities.",
+			"CodeMarque operational status: Green. Gemini 2.5 Flash processing your mission parameters.",
+			"*establishes secure communication link* Request authenticated. Deploying tactical intelligence.",
+			"Spartan-class AI assistant reporting for duty. Processing your request with enhanced capabilities.",
+			"*initializes battlefield awareness* Threat level: Zero. Focusing on your strategic requirements.",
+			"CodeMarque – Powered by Google Gemini 2.5 Flash. Your request is being processed with enterprise precision.",
+			"*deploys advanced reconnaissance* Mission briefing received. Tactical analysis commencing."
 		];
 		
 		// Select thinking message based on content analysis

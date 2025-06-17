@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  codemarque:
+    build: .
+    container_name: codemarque-bot
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    ports:
+      - "4000:4000"
+    volumes:
+      # Mount temp directory for Mermaid diagrams
+      - ./temp:/app/temp
+      # Optional: Mount logs directory
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - codemarque-network
+    # Chrome security for Docker
+    security_opt:
+      - seccomp:unconfined
+    # Add capabilities needed for Chrome
+    cap_add:
+      - SYS_ADMIN
+
+  redis:
+    image: redis:7-alpine
+    container_name: codemarque-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - codemarque-network
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:
+
+networks:
+  codemarque-network:
+    driver: bridge 

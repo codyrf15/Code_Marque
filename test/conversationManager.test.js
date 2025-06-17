@@ -78,13 +78,17 @@ describe('ConversationManager', () => {
 		const userId = '123';
 		const botMessage = {
 			channel: {
-				sendTyping: jest.fn(),
-				send: jest.fn(),
+				sendTyping: jest.fn().mockResolvedValue(),
+				send: jest.fn().mockResolvedValue(),
 			},
 		};
-		const response = {
-			content: [{ text: 'Model response' }],
-		};
+		const response = jest.fn().mockResolvedValue({
+			stream: null,
+			response: {
+				text: () => 'Model response',
+				functionCalls: () => null
+			}
+		});
 		const originalMessage = {
 			author: { id: userId },
 			content: 'User message',
@@ -106,13 +110,18 @@ describe('ConversationManager', () => {
 		const userId = '123';
 		const botMessage = {
 			channel: {
-				sendTyping: jest.fn(),
-				send: jest.fn(),
+				sendTyping: jest.fn().mockResolvedValue(),
+				send: jest.fn().mockResolvedValue(),
 			},
 		};
-		const response = {
-			content: [{ text: 'A'.repeat(4000) }],
-		};
+		const longResponse = 'A'.repeat(4000);
+		const response = jest.fn().mockResolvedValue({
+			stream: null,
+			response: {
+				text: () => longResponse,
+				functionCalls: () => null
+			}
+		});
 		const originalMessage = {
 			author: { id: userId },
 			content: 'User message',
@@ -247,18 +256,21 @@ describe('ConversationManager', () => {
 		expect(stopTyping).toHaveBeenCalled();
 	});
 
-
 	test('should handle error and call error handler', async () => {
 		const userId = '123';
 		const botMessage = {
 			channel: {
-				sendTyping: jest.fn(),
-				send: jest.fn(),
+				sendTyping: jest.fn().mockResolvedValue(),
+				send: jest.fn().mockResolvedValue(),
 			},
 		};
-		const response = {
-			content: [{ text: 'Model response' }],
-		};
+		const response = jest.fn().mockResolvedValue({
+			stream: null,
+			response: {
+				text: () => 'Model response',
+				functionCalls: () => null
+			}
+		});
 		const originalMessage = {
 			author: { id: userId },
 			content: 'User message',
@@ -272,10 +284,8 @@ describe('ConversationManager', () => {
 		};
 		conversationManager.errorHandler = mockErrorHandler;
 
-		// Mock an error during model response handling
-		botMessage.channel.send.mockImplementationOnce(() => {
-			throw new Error(errorMessage);
-		});
+		// Mock an error during response processing - make the response function throw
+		response.mockRejectedValueOnce(new Error(errorMessage));
 
 		await conversationManager.handleModelResponse(botMessage, response, originalMessage, stopTyping);
 

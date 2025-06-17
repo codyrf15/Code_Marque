@@ -31,7 +31,6 @@ attached_assets/
 .cursor/
 CLAUDE.md
 REVIEW_GATE_INSTALLATION.md
-claude_monitor.sh
 get-pip.py
 env.example
 
@@ -80,3 +79,8 @@ tasks/
 
 # Claude Code MCP configuration
 .claude/ 
+
+# Claude monitoring scripts
+# Note: Removed claude_monitor.sh as part of Gemini migration
+
+# Testing files 

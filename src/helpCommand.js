@@ -3,8 +3,8 @@ const { EmbedBuilder } = require('discord.js');
 async function helpCommand(interaction) {
 	const helpEmbed = new EmbedBuilder()
 		.setColor('#0099ff')
-		.setTitle('Available Commands')
-		.setDescription('Here are the available commands and their usage:')
+		.setTitle('CodeMarque – Powered by Google Gemini 2.5 Flash - Available Commands')
+		.setDescription('Professional AI Discord Assistant - Here are the available commands and their usage:')
 		.addFields(
 			{ name: '/clear', value: 'Clears the conversation history.' },
 			{ name: '/save', value: 'Saves the current conversation and sends it to your inbox.' },

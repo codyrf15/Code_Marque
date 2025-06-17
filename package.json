@@ -1,7 +1,7 @@
 {
 	"name": "codemarque-ai-bot",
 	"version": "1.0.0",
-	"description": "A Discord bot powered by Anthropic Claude and Google Gemini AI",
+	"description": "CodeMarque – Powered by Google Gemini 2.5 Flash - Professional AI Discord Assistant",
 	"main": "src/index.js",
 	"scripts": {
 		"lint": "eslint src/**/*.js",
@@ -10,12 +10,11 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/codyrf15/discord-bot-claude-gemini.git"
+		"url": "https://github.com/codyrf15/CodeMarque.git"
 	},
 	"author": "Cody",
 	"license": "MIT",
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.53.0",
 		"@google/generative-ai": "^0.24.1",
 		"@mermaid-js/mermaid-cli": "^11.4.2",
 		"@modelcontextprotocol/sdk": "^1.12.1",

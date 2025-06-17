@@ -16,9 +16,6 @@ const commands = [
 				.setDescription('The name of the model.')
 				.setRequired(true)
 				.addChoices(
-					{ name: 'Claude 3 Opus', value: 'claude-3-opus-20240229' },
-					{ name: 'Claude 3 Sonnet', value: 'claude-3-sonnet-20240229' },
-					{ name: 'Claude 3 Haiku', value: 'claude-3-haiku-20240307' },
 					{ name: 'Google Gemini 2.5 Flash', value: 'gemini-2.5-flash-preview-05-20' },
 				),
 		)
@@ -32,7 +29,7 @@ const commands = [
 				.setDescription('The name of the prompt.')
 				.setRequired(true)
 				.addChoices(
-					{ name: 'CodeMarque (Master Chief clone)', value: 'codemarque' },
+					{ name: 'CodeMarque – Powered by Google Gemini 2.5 Flash', value: 'codemarque' },
 				),
 		)
 		.setDMPermission(true),
