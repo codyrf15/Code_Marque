@@ -83,4 +83,10 @@ tasks/
 # Claude monitoring scripts
 # Note: Removed claude_monitor.sh as part of Gemini migration
 
-# Testing files 
+# Testing files
+
+# Internal development and coordination files (added for cleanup)
+.coordination/
+archive/
+test-assets/
+temp/mermaid-diagrams/*.png 

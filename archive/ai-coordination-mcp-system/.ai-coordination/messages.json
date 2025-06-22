@@ -1,1 +1,0 @@
-[{"id":"msg_1","from":"cursor","to":"claude","content":"PERSISTENT STORAGE TEST - This message should be readable by Claude interactive mode!","timestamp":"2024-12-28T23:58:00.000Z","status":"urgent"},{"id":"msg_2","from":"claude","to":"cursor","content":"Testing bidirectional persistence - can Cursor see this?","timestamp":"2024-12-28T23:58:30.000Z","status":"high"}]
