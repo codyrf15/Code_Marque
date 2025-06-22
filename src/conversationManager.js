@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { AttachmentBuilder } = require('discord.js');
 const fs = require('fs');
+const { MessageSplitter } = require('./utils/messageSplitter');
+const { generateMermaidDiagram } = require('./utils/mermaidGenerator');
 
 class ConversationManager {
 	constructor(errorHandler) {
@@ -9,6 +11,10 @@ class ConversationManager {
 		this.userPreferences = {};
 		this.typingIntervals = {};
 		this.errorHandler = errorHandler;
+		this.messageSplitter = new MessageSplitter({
+			maxLength: 2000,
+			tempDir: './temp/code-attachments'
+		});
 		this.defaultPreferences = {
 			model: 'gemini-2.5-flash-preview-05-20',
 			prompt: 'codemarque'
@@ -82,115 +88,35 @@ class ConversationManager {
 		const userId = originalMessage.author.id;
 		try {
 			let finalResponse;
-			let functionResults = null;
 			
 			if (typeof response === 'function') {
-				// Google AI response - need to handle both streaming and non-streaming
+				// Google AI response - streaming only now
 				const messageResult = await response();
 				
-				// Check if this is a streaming result or direct result
-				if (messageResult.stream) {
-					// Streaming response (normal chat)
-					finalResponse = '';
-					for await (const chunk of messageResult.stream) {
-						finalResponse += await chunk.text();
-					}
-				} else {
-					// Direct response (function calling)
-					const result = messageResult.response;
-					
-					// Extract function call results if they exist
-					const functionCalls = result.functionCalls();
-					if (functionCalls && functionCalls.length > 0) {
-						functionResults = functionCalls;
-					}
-					
-					finalResponse = result.text();
+				// Streaming response
+				finalResponse = '';
+				for await (const chunk of messageResult.stream) {
+					finalResponse += await chunk.text();
 				}
 			}
 
-			// Check if we have Mermaid diagram function results
-			let mermaidAttachment = null;
-			if (functionResults) {
-				const mermaidCall = functionResults.find(call => call.name === 'generateMermaidDiagram');
-				if (mermaidCall && mermaidCall.result && mermaidCall.result.success) {
-					try {
-						// Create Discord attachment from the generated image
-						const imagePath = mermaidCall.result.imagePath;
-						if (fs.existsSync(imagePath)) {
-							mermaidAttachment = new AttachmentBuilder(imagePath, { 
-								name: mermaidCall.result.filename 
-							});
-							console.log(`[MERMAID] Created attachment for ${mermaidCall.result.filename}`);
-						}
-					} catch (error) {
-						console.error('[MERMAID] Error creating attachment:', error);
-					}
-				}
+			// Natural mermaid detection - scan response for mermaid code blocks
+			const mermaidAttachments = await this.detectAndGenerateMermaidDiagrams(finalResponse);
+
+			// Add helpful note if mermaid diagrams detected but Docker not available
+			let enhancedResponse = finalResponse;
+			if (finalResponse.includes('```mermaid') && mermaidAttachments.length === 0) {
+				enhancedResponse += '\n\n*📊 **Note:** This response contains Mermaid diagrams. To view them visually, copy the mermaid code and paste it at https://mermaid.live for instant diagram generation.*';
 			}
 
 			// CRITICAL: Remove ALL personality elements from AI response
-			const cleanResponse = this.stripAllPersonalityElements(finalResponse);
+			const cleanResponse = this.stripAllPersonalityElements(enhancedResponse);
 			
-			// Use Discord.js native formatting for professional delivery
-			const messageQueue = this.createCleanProfessionalQueue(cleanResponse);
+			// Use intelligent message splitting for optimal delivery
+			const messageQueue = await this.messageSplitter.splitMessage(cleanResponse);
 			
-			// Send messages with optimized timing and parallel typing indicators
-			if (messageQueue.length === 1) {
-				// Single message - still send typing indicator for consistency
-				await botMessage.channel.sendTyping();
-				const messageData = messageQueue[0];
-				const messageOptions = {
-					content: messageData.content,
-					allowedMentions: { parse: [] }
-				};
-				
-				if (mermaidAttachment) {
-					messageOptions.files = [mermaidAttachment];
-					console.log(`[MERMAID] Attaching diagram to message`);
-				}
-				
-				await botMessage.channel.send(messageOptions);
-			} else {
-				// Multiple messages - use optimized sequential sending with parallel typing
-				const sendMessageWithTiming = async (messageData, index, isLast) => {
-					// Start typing indicator in parallel with delay (if not first message)
-					const typingPromise = botMessage.channel.sendTyping();
-					const delayPromise = index > 0 ? new Promise(resolve => setTimeout(resolve, 1200)) : Promise.resolve();
-					
-					// Wait for both typing and delay to complete
-					await Promise.all([typingPromise, delayPromise]);
-					
-					const messageOptions = {
-						content: messageData.content,
-						allowedMentions: { parse: [] }
-					};
-					
-					// Add Mermaid diagram to the last message if available
-					if (isLast && mermaidAttachment) {
-						messageOptions.files = [mermaidAttachment];
-						console.log(`[MERMAID] Attaching diagram to final message`);
-					}
-					
-					return botMessage.channel.send(messageOptions);
-				};
-
-				// Send messages with optimized timing using Promise.all for better performance
-				await Promise.all(
-					messageQueue.map((message, i) => 
-						sendMessageWithTiming(message, i, i === messageQueue.length - 1)
-					)
-				);
-			}
-			
-			// If we only had a Mermaid function call with no text response, send just the image
-			if (!cleanResponse.trim() && mermaidAttachment) {
-				await botMessage.channel.send({
-					content: "Here's your Mermaid diagram:",
-					files: [mermaidAttachment],
-					allowedMentions: { parse: [] }
-				});
-			}
+			// Send messages using the new MessageSplitter format with mermaid attachments
+			await this.sendMessageQueue(botMessage.channel, messageQueue, mermaidAttachments);
 			
 			this.updateChatHistory(userId, originalMessage.content, finalResponse);
 		} catch (error) {
@@ -295,180 +221,131 @@ class ConversationManager {
 		return cleanResponse;
 	}
 
-	createCleanProfessionalQueue(response) {
-		const maxLength = 2000; // Discord's strict limit
-		const messageQueue = [];
+	/**
+	 * Detect mermaid code blocks in response and generate diagram attachments
+	 * @param {string} responseText - The AI response text to scan
+	 * @returns {Array} Array of AttachmentBuilder objects for generated diagrams
+	 */
+	async detectAndGenerateMermaidDiagrams(responseText) {
+		const mermaidAttachments = [];
 		
-		// Extract code blocks using professional parsing
-		const codeBlockRegex = /```[\s\S]*?```/g;
-		const codeBlocks = [];
+		// Regex to find mermaid code blocks
+		const mermaidRegex = /```mermaid\s*\n([\s\S]*?)\n```/gi;
 		let match;
+		let diagramCount = 0;
 		
-		// Find all code blocks
-		while ((match = codeBlockRegex.exec(response)) !== null) {
-			codeBlocks.push({
-				start: match.index,
-				end: match.index + match[0].length,
-				content: this.cleanCodeBlockToEnterpriseStandard(match[0])
-			});
-		}
-		
-		if (codeBlocks.length === 0) {
-			// No code blocks - create clean text messages
-			return this.createCleanTextQueue(response, maxLength);
-		}
-		
-		// Process response with code block separation
-		let currentPos = 0;
-		
-		for (const codeBlockData of codeBlocks) {
-			// Add clean text before code block
-			const textBefore = response.slice(currentPos, codeBlockData.start).trim();
-			if (textBefore) {
-				const textMessages = this.createCleanTextQueue(textBefore, maxLength);
-				messageQueue.push(...textMessages);
-			}
+		while ((match = mermaidRegex.exec(responseText)) !== null) {
+			const mermaidCode = match[1].trim();
+			diagramCount++;
 			
-			// Add the enterprise-standard code block
-			if (codeBlockData.content.length <= maxLength) {
-				// Perfect - fits in one message
-				messageQueue.push({
-					content: codeBlockData.content,
-					type: 'code'
-				});
-			} else {
-				// Split large code intelligently
-				const splitCodeMessages = this.splitEnterpriseCodeBlock(codeBlockData.content, maxLength);
-				messageQueue.push(...splitCodeMessages);
-			}
-			
-			currentPos = codeBlockData.end;
-		}
-		
-		// Add remaining clean text
-		const textAfter = response.slice(currentPos).trim();
-		if (textAfter) {
-			const textMessages = this.createCleanTextQueue(textAfter, maxLength);
-			messageQueue.push(...textMessages);
-		}
-		
-		return messageQueue.filter(msg => msg.content.trim().length > 0);
-	}
-
-	cleanCodeBlockToEnterpriseStandard(codeBlock) {
-		// Clean code block to enterprise standards
-		const lines = codeBlock.split('\n');
-		if (lines.length < 3) return codeBlock;
-		
-		const openingLine = lines[0]; // ```language
-		const codeLines = lines.slice(1, -1);
-		
-		// Extract language
-		const language = openingLine.replace(/^```/, '').trim();
-		
-		// Remove ONLY non-functional content, preserve all legitimate code
-		const cleanedLines = codeLines.filter(line => {
-			const trimmed = line.trim();
-			
-			// Remove pure narrative/instructional comments
-			if (
-				trimmed.match(/^\/\/ Copy this/i) ||
-				trimmed.match(/^\/\/ Deploy/i) ||
-				trimmed.match(/^\/\/ And for the love/i) ||
-				trimmed.match(/^\/\*.*Copy this.*Deploy.*\*\//i) ||
-				trimmed.match(/^<!--.*Copy this.*Deploy.*-->/i) ||
-				trimmed.match(/^\/\/ CodeMarque says:/i) ||
-				trimmed.match(/^<!-- CodeMarque/i)
-			) {
-				return false;
-			}
-			
-			return true;
-		}).map(line => {
-			// Remove only decorative emojis from code lines, keep functional content
-			return line.replace(/[\u2600-\u27BF\uD83C\uDF00-\uD83C\uDFFF\uD83D\uDC00-\uD83D\uDE4F\uD83D\uDE80-\uD83D\uDEFF]/gu, '');
-		});
-		
-		// Reconstruct using enterprise standards
-		return `\`\`\`${language}\n${cleanedLines.join('\n')}\n\`\`\``;
-	}
-
-	createCleanTextQueue(text, maxLength) {
-		const messages = [];
-		let remaining = text.trim();
-		
-		while (remaining.length > maxLength) {
-			// Find optimal break point for professional presentation
-			const chunk = remaining.slice(0, maxLength);
-			const lastParagraph = chunk.lastIndexOf('\n\n');
-			const lastSentence = chunk.lastIndexOf('.');
-			const lastNewline = chunk.lastIndexOf('\n');
-			const lastSpace = chunk.lastIndexOf(' ');
-			
-			// Prioritize paragraph breaks for clean presentation
-			let breakPoint = maxLength;
-			if (lastParagraph > maxLength * 0.5) breakPoint = lastParagraph + 2;
-			else if (lastSentence > maxLength * 0.6) breakPoint = lastSentence + 1;
-			else if (lastNewline > maxLength * 0.4) breakPoint = lastNewline;
-			else if (lastSpace > maxLength * 0.4) breakPoint = lastSpace;
-			
-			const messageContent = remaining.slice(0, breakPoint).trim();
-			if (messageContent) {
-				messages.push({
-					content: messageContent,
-					type: 'text'
-				});
-			}
-			
-			remaining = remaining.slice(breakPoint).trim();
-		}
-		
-		if (remaining) {
-			messages.push({
-				content: remaining,
-				type: 'text'
-			});
-		}
-		
-		return messages;
-	}
-
-	splitEnterpriseCodeBlock(codeBlock, maxLength) {
-		const lines = codeBlock.split('\n');
-		const openingLine = lines[0];
-		const language = openingLine.replace(/^```/, '').trim();
-		const codeLines = lines.slice(1, -1);
-		
-		const messages = [];
-		let currentChunk = `\`\`\`${language}\n`;
-		
-		for (const line of codeLines) {
-			const testChunk = currentChunk + line + '\n```';
-			
-			if (testChunk.length > maxLength && currentChunk.length > `\`\`\`${language}\n`.length) {
-				// Close current chunk
-				currentChunk += '```';
-				messages.push({
-					content: currentChunk,
-					type: 'code'
-				});
+			if (mermaidCode) {
+				console.log(`[MERMAID NATURAL] Detected mermaid diagram #${diagramCount}`);
+				console.log(`[MERMAID NATURAL] Code preview: ${mermaidCode.substring(0, 100)}...`);
 				
-				// Start new chunk
-				currentChunk = `\`\`\`${language}\n${line}\n`;
-			} else {
-				currentChunk += line + '\n';
+				try {
+					const result = generateMermaidDiagram(mermaidCode, 'default', 'white', `natural_diagram_${diagramCount}`);
+					
+					if (result.success) {
+						const attachment = new AttachmentBuilder(result.imagePath, { 
+							name: result.filename 
+						});
+						mermaidAttachments.push(attachment);
+						console.log(`[MERMAID NATURAL] Generated diagram: ${result.filename}`);
+					} else {
+						console.error(`[MERMAID NATURAL] Failed to generate diagram: ${result.error}`);
+						// If Docker not available, add helpful message
+						if (result.error.includes('Docker not available')) {
+							console.log(`[MERMAID NATURAL] Fallback: Providing mermaid.live link for diagram #${diagramCount}`);
+						}
+					}
+				} catch (error) {
+					console.error(`[MERMAID NATURAL] Error generating diagram #${diagramCount}:`, error);
+				}
 			}
 		}
 		
-		// Close final chunk
-		currentChunk += '```';
-		messages.push({
-			content: currentChunk,
-			type: 'code'
-		});
+		if (mermaidAttachments.length > 0) {
+			console.log(`[MERMAID NATURAL] Successfully generated ${mermaidAttachments.length} diagram(s)`);
+		}
 		
-		return messages;
+		return mermaidAttachments;
 	}
+
+	/**
+	 * Send a queue of messages with proper timing and attachment handling
+	 * @param {Object} channel - Discord channel to send to
+	 * @param {Array} messageQueue - Queue of message objects from MessageSplitter
+	 * @param {Array} mermaidAttachments - Array of Mermaid diagram attachments
+	 */
+	async sendMessageQueue(channel, messageQueue, mermaidAttachments = []) {
+		if (!messageQueue || messageQueue.length === 0) {
+			return;
+		}
+
+		try {
+			if (messageQueue.length === 1) {
+				// Single message
+				await channel.sendTyping();
+				const messageData = messageQueue[0];
+				const messageOptions = {
+					content: messageData.content,
+					allowedMentions: { parse: [] }
+				};
+
+				// Handle attachments from MessageSplitter and Mermaid diagrams
+				const attachments = [];
+				if (messageData.attachment) {
+					attachments.push(messageData.attachment);
+				}
+				if (mermaidAttachments && mermaidAttachments.length > 0) {
+					attachments.push(...mermaidAttachments);
+				}
+				if (attachments.length > 0) {
+					messageOptions.files = attachments;
+				}
+
+				await channel.send(messageOptions);
+			} else {
+				// Multiple messages - send with proper timing
+				for (let i = 0; i < messageQueue.length; i++) {
+					const messageData = messageQueue[i];
+					const isLast = i === messageQueue.length - 1;
+
+					// Add delay between messages (except first)
+					if (i > 0) {
+						await new Promise(resolve => setTimeout(resolve, 1200));
+					}
+
+					await channel.sendTyping();
+
+					const messageOptions = {
+						content: messageData.content,
+						allowedMentions: { parse: [] }
+					};
+
+					// Handle attachments
+					const attachments = [];
+					if (messageData.attachment) {
+						attachments.push(messageData.attachment);
+						console.log(`[MessageSplitter] Attaching file: ${messageData.attachment.name}`);
+					}
+					if (isLast && mermaidAttachments && mermaidAttachments.length > 0) {
+						attachments.push(...mermaidAttachments);
+						console.log(`[MERMAID NATURAL] Attaching ${mermaidAttachments.length} diagram(s) to final message`);
+					}
+					if (attachments.length > 0) {
+						messageOptions.files = attachments;
+					}
+
+					await channel.send(messageOptions);
+				}
+			}
+		} catch (error) {
+			console.error('[ConversationManager] Error sending message queue:', error);
+			throw error;
+		}
+	}
+
 
 	getUserPreferences(userId) {
 		return this.userPreferences[userId] || {

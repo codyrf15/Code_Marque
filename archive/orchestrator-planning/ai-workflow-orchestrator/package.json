@@ -1,0 +1,23 @@
+{
+  "name": "ai-workflow-orchestrator",
+  "version": "1.0.0",
+  "description": "MCP server for AI workflow orchestration with review gates and intelligent routing",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch & nodemon dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "nodemon": "^3.0.0"
+  },
+  "keywords": ["mcp", "ai-orchestration", "workflow", "review-gate"],
+  "author": "CodeMarque Team",
+  "license": "MIT"
+} 

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ai-coordination": {
+      "command": "node",
+      "args": ["/home/cody/projects/CodeMarque/ai-coordination-mcp/dist/index.js"],
+      "env": {}
+    }
+  }
+} 

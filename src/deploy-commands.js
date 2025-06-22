@@ -16,7 +16,11 @@ const commands = [
 				.setDescription('The name of the model.')
 				.setRequired(true)
 				.addChoices(
-					{ name: 'Google Gemini 2.5 Flash', value: 'gemini-2.5-flash-preview-05-20' },
+					{ name: 'Gemini 2.5 Flash (Default)', value: 'gemini-2.5-flash-preview-05-20' },
+					{ name: 'Gemini 2.0 Flash Experimental', value: 'gemini-2.0-flash-exp' },
+					{ name: 'Gemini 1.5 Flash Latest', value: 'gemini-1.5-flash-latest' },
+					{ name: 'Gemini 1.5 Pro Latest', value: 'gemini-1.5-pro-latest' },
+					{ name: 'Gemini 1.5 Flash-8B (Fast)', value: 'gemini-1.5-flash-8b-latest' },
 				),
 		)
 		.setDMPermission(true),
@@ -43,6 +47,10 @@ const commands = [
 		.setDescription('Triggers a test error to check the error notification webhook.')
 		.setDMPermission(false),
 	new SlashCommandBuilder().setName('settings').setDescription('Displays your current model and prompt settings.').setDMPermission(true),
+	new SlashCommandBuilder()
+		.setName('diagnostic')
+		.setDescription('Run production environment diagnostics (Owner Only).')
+		.setDMPermission(true),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);

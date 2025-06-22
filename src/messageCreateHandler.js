@@ -335,23 +335,7 @@ async function formatMultimodalContent(messageContent, attachments) {
 	return parts;
 }
 
-// Check if message might benefit from function calling
-function shouldUseFunctionCalling(messageContent) {
-	const functionTriggers = [
-		'what time', 'current time', 'date',
-		'calculate', 'math', 'solve',
-		'random number', 'random',
-		'server info', 'guild info', 'channel info',
-		'format text', 'bold', 'italic', 'code',
-		'count words', 'analyze text', 'text analysis',
-		'mermaid', 'diagram', 'flowchart', 'chart', 'graph',
-		'sequence diagram', 'class diagram', 'entity relationship',
-		'visualize', 'draw diagram', 'create chart'
-	];
-	
-	const lowerContent = messageContent.toLowerCase();
-	return functionTriggers.some(trigger => lowerContent.includes(trigger));
-}
+// Function calling removed - using natural mermaid detection instead
 
 // Check if message might need structured JSON output
 function shouldUseJSONOutput(messageContent) {
@@ -429,13 +413,12 @@ async function onMessageCreate(message, conversationQueue, errorHandler, convers
 
 			// Determine capabilities to use based on content analysis
 			const capabilities = {
-				functionCalling: shouldUseFunctionCalling(messageContent),
 				jsonOutput: shouldUseJSONOutput(messageContent),
 				multimodal: hasMultimodalContent,
 				hasAttachments: processedAttachments.length > 0
 			};
 
-			console.log(`[CAPABILITY ANALYSIS] Function Calling: ${capabilities.functionCalling}, JSON Output: ${capabilities.jsonOutput}, Multimodal: ${capabilities.multimodal}, Attachments: ${capabilities.hasAttachments}`);
+			console.log(`[CAPABILITY ANALYSIS] JSON Output: ${capabilities.jsonOutput}, Multimodal: ${capabilities.multimodal}, Attachments: ${capabilities.hasAttachments}`);
 
 			// Format content for multimodal processing
 			const formattedContent = await formatMultimodalContent(messageContent, processedAttachments);

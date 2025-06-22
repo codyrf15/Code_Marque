@@ -219,7 +219,14 @@ if (googleApiKeys.length === 0) {
 	console.error('No valid Google API keys found! Please check your environment variables.');
 }
 
-const genAIInstances = googleApiKeys.map((apiKey) => new GoogleGenerativeAI(apiKey));
+const genAIInstances = googleApiKeys.map((apiKey) => new GoogleGenerativeAI(apiKey, {
+	// Configure timeouts for better reliability
+	requestOptions: {
+		timeout: 45000, // 45 second timeout (increased)
+		retries: 2, // Allow 2 retries for network issues
+		retryDelay: 1000 // 1 second delay between retries
+	}
+}));
 
 // Initialize custom classes
 const errorHandler = new ErrorHandler();
@@ -239,7 +246,10 @@ const limiter = rateLimit({
 
 const googleLimiter = new Bottleneck({
 	maxConcurrent: 1,
-	minTime: 2000, // 30 requests per minute (60000ms / 30 = 2000ms)
+	minTime: 3000, // 20 requests per minute (more conservative)
+	reservoir: 5, // Start with 5 requests available
+	reservoirRefreshAmount: 5,
+	reservoirRefreshInterval: 15 * 1000, // Refresh 5 requests every 15 seconds
 });
 
 // Apply rate limiter middleware to Express app
@@ -376,10 +386,7 @@ async function processConversation({ message, messageContent, processedAttachmen
 			systemInstruction += `\n\nYou have advanced multimodal capabilities. When analyzing images, describe what you see in detail. When analyzing videos, describe the visual content, actions, and scenes. When analyzing audio, describe what you hear including speech, sounds, and music.`;
 		}
 
-		// Enhance system instruction for function calling
-		if (capabilities.functionCalling) {
-			systemInstruction += `\n\nYou have access to helpful functions. Use them when appropriate to provide accurate information like current time, calculations, server info, text formatting, or text analysis.`;
-		}
+		// Natural mermaid integration - no function calling needed
 
 		// Enhance system instruction for JSON output
 		if (capabilities.jsonOutput) {
@@ -394,18 +401,34 @@ async function processConversation({ message, messageContent, processedAttachmen
 			systemInstruction: systemInstruction
 		};
 		
-		// Add function calling tools if needed
-		if (capabilities.functionCalling) {
-			const { discordBotTools } = require('./functionTools');
-			modelConfig.tools = discordBotTools;
-			console.log(`[FUNCTION CALLING] Enabled with ${discordBotTools.length} tools`);
-		}
+		// Function calling removed - using natural mermaid detection instead
 
-		const model = await googleLimiter.schedule(() => genAI.getGenerativeModel(modelConfig, { apiVersion: 'v1beta' }));
+		const model = await googleLimiter.schedule(() => genAI.getGenerativeModel(modelConfig, { 
+			apiVersion: 'v1beta',
+			timeout: 30000 // 30 second timeout
+		}));
 		
-		// Prepare generation config - use adaptive token limits for comprehensive responses
+		// Prepare generation config - use adaptive token limits based on model
+		const getMaxTokensForModel = (modelName) => {
+			if (modelName.includes('flash-8b')) {
+				return 8192; // Gemini 1.5 Flash-8B max limit
+			} else if (modelName.includes('1.5-pro')) {
+				return 8192; // Gemini 1.5 Pro max limit
+			} else if (modelName.includes('1.5-flash')) {
+				return 8192; // Gemini 1.5 Flash max limit
+			} else if (modelName.includes('2.0-flash')) {
+				return 32768; // Gemini 2.0 Flash higher limit
+			} else if (modelName.includes('2.5-flash')) {
+				return 32768; // Gemini 2.5 Flash higher limit
+			}
+			return 8192; // Safe default
+		};
+
+		const maxTokens = getMaxTokensForModel(modelName);
+		console.log(`[TOKEN LIMIT] Using ${maxTokens} max output tokens for model ${modelName}`);
+
 		const generationConfig = {
-			maxOutputTokens: 32768, // Increased to allow for comprehensive responses like full games/code
+			maxOutputTokens: maxTokens,
 			temperature: 0.7,
 			topP: 0.8,
 		};
@@ -574,18 +597,40 @@ async function processConversation({ message, messageContent, processedAttachmen
 		const botMessage = await message.reply(thinkingMessage);
 		await conversationManager.startTyping(message.author.id);
 
-		// Enhanced model response handling
+		// Enhanced model response handling with retry logic
+		const apiCallWithRetry = async (retries = 3) => {
+			for (let attempt = 1; attempt <= retries; attempt++) {
+				try {
+					// Use streaming for all responses now
+					return await chat.sendMessageStream(finalContent);
+				} catch (error) {
+					console.error(`[API RETRY] Attempt ${attempt}/${retries} failed:`, error.message);
+					
+					// Don't retry on certain errors
+					if (error.message.includes('SAFETY') || 
+						error.message.includes('API_KEY') || 
+						error.message.includes('quota') || 
+						error.status === 429 || 
+						error.status === 400 ||
+						error.message.includes('maxOutputTokens')) {
+						throw error;
+					}
+					
+					if (attempt === retries) {
+						throw error;
+					}
+					
+					// Exponential backoff: 2s, 4s, 8s
+					const delay = Math.pow(2, attempt) * 1000;
+					console.log(`[API RETRY] Waiting ${delay}ms before retry...`);
+					await new Promise(resolve => setTimeout(resolve, delay));
+				}
+			}
+		};
+
 		await conversationManager.handleModelResponse(
 			botMessage,
-			() => {
-				if (capabilities.functionCalling) {
-					// For function calling, we need to handle the response differently
-					return chat.sendMessage(finalContent);
-				} else {
-					// Use streaming for regular responses
-					return chat.sendMessageStream(finalContent);
-				}
-			},
+			apiCallWithRetry,
 			message,
 			async () => {
 				await conversationManager.stopTyping(message.author.id);
@@ -607,12 +652,24 @@ setInterval(() => {
 	conversationManager.clearInactiveConversations(inactivityDuration);
 }, inactivityDuration);
 
-// Error handling
+// Enhanced error handling
 process.on('unhandledRejection', (error) => {
+	console.error('Unhandled Promise Rejection:', error);
+	// Don't crash on Discord interaction errors
+	if (error.code === 'InteractionAlreadyReplied' || error.message.includes('Unknown interaction')) {
+		console.log('[DISCORD ERROR] Ignoring Discord interaction error - continuing...');
+		return;
+	}
 	errorHandler.handleUnhandledRejection(error);
 });
 
 process.on('uncaughtException', (error) => {
+	console.error('Uncaught Exception:', error);
+	// Don't crash on Discord interaction errors
+	if (error.code === 'InteractionAlreadyReplied' || error.message.includes('Unknown interaction')) {
+		console.log('[DISCORD ERROR] Ignoring Discord interaction error - continuing...');
+		return;
+	}
 	errorHandler.handleUncaughtException(error);
 });
 

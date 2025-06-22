@@ -14,9 +14,21 @@ async function onInteractionCreate(interaction, conversationManager, commandHand
 
 	if (interaction.commandName === 'clear') {
 		try {
+			console.log(`[INTERACTION] Clear command received from user ${interaction.user.id}`);
 			await interaction.deferReply({ ephemeral: true });
-			await commandHandler.clearCommand(interaction, conversationManager);
+			console.log(`[INTERACTION] Clear command deferred successfully`);
+			
+			// Set timeout to prevent Discord interaction timeout
+			const timeoutPromise = new Promise((_, reject) => {
+				setTimeout(() => reject(new Error('Clear command timeout')), 12000);
+			});
+			
+			const commandPromise = commandHandler.clearCommand(interaction, conversationManager);
+			
+			await Promise.race([commandPromise, timeoutPromise]);
 		} catch (error) {
+			console.error(`[INTERACTION ERROR] Clear command failed:`, error);
+			// Error handler will check interaction state before replying
 			await errorHandler.handleError(error, interaction);
 		}
 		return;
@@ -34,10 +46,34 @@ async function onInteractionCreate(interaction, conversationManager, commandHand
 
 	if (interaction.commandName === 'model') {
 		try {
+			console.log(`[INTERACTION] Model command received from user ${interaction.user.id}`);
 			await interaction.deferReply({ ephemeral: true });
-			await commandHandler.modelCommand(interaction, conversationManager);
+			console.log(`[INTERACTION] Reply deferred successfully`);
+			
+			// Set timeout to prevent Discord interaction timeout
+			const timeoutPromise = new Promise((_, reject) => {
+				setTimeout(() => reject(new Error('Command timeout')), 12000); // 12 seconds (before Discord's 15s limit)
+			});
+			
+			const commandPromise = commandHandler.modelCommand(interaction, conversationManager);
+			
+			await Promise.race([commandPromise, timeoutPromise]);
 		} catch (error) {
-			await errorHandler.handleError(error, interaction);
+			console.error(`[INTERACTION ERROR] Model command failed:`, error);
+			try {
+				// Check if interaction is still valid before responding
+				if (!interaction.replied && !interaction.deferred) {
+					await interaction.reply('❌ An error occurred while changing the model. Please try again.');
+				} else if (interaction.deferred) {
+					await interaction.editReply('❌ An error occurred while changing the model. Please try again.');
+				}
+			} catch (replyError) {
+				console.error(`[INTERACTION ERROR] Failed to send error reply (interaction may have timed out):`, replyError.message);
+				// Don't call error handler for Discord timeout errors - just log them
+				if (!replyError.message.includes('Unknown interaction')) {
+					await errorHandler.handleError(error, interaction);
+				}
+			}
 		}
 		return;
 	}

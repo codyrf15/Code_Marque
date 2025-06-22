@@ -26,10 +26,23 @@ class ErrorHandler {
 				});
 			}
 		} else {
-			await interaction.reply({
-				content: 'Sorry, something went wrong! Our team has been notified and will look into the issue.',
-				ephemeral: true,
-			});
+			// Check if interaction can be replied to
+			try {
+				if (!interaction.replied && !interaction.deferred) {
+					await interaction.reply({
+						content: 'Sorry, something went wrong! Our team has been notified and will look into the issue.',
+						ephemeral: true,
+					});
+				} else if (interaction.deferred) {
+					await interaction.editReply({
+						content: 'Sorry, something went wrong! Our team has been notified and will look into the issue.',
+					});
+				}
+				// If already replied, do nothing
+			} catch (replyError) {
+				console.error('Error sending interaction error message:', replyError.message);
+				// Don't throw - just log it
+			}
 		}
 
 		// Log error details for debugging

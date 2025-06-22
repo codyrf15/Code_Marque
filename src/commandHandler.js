@@ -70,9 +70,20 @@ class CommandHandler {
 	}
 
 	async modelCommand(interaction, conversationManager) {
-		const model = interaction.options.getString('name');
-		conversationManager.setUserPreferences(interaction.user.id, { model });
-		await interaction.editReply(`> \`The model has been set to ${model}.\``);
+		try {
+			console.log(`[MODEL COMMAND] User ${interaction.user.id} changing model`);
+			const model = interaction.options.getString('name');
+			console.log(`[MODEL COMMAND] Selected model: ${model}`);
+			
+			conversationManager.setUserPreferences(interaction.user.id, { model });
+			console.log(`[MODEL COMMAND] Model preference set successfully`);
+			
+			await interaction.editReply(`> \`The model has been set to ${model}.\``);
+			console.log(`[MODEL COMMAND] Reply sent successfully`);
+		} catch (error) {
+			console.error(`[MODEL COMMAND ERROR]`, error);
+			throw error;
+		}
 	}
 
 	async promptCommand(interaction, conversationManager) {
