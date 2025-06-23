@@ -49,6 +49,17 @@ CodeMarque AI Bot serves as your digital command center, providing:
 - **Intelligent Fallback**: Provides mermaid.live links when Docker unavailable
 - **Multiple Formats**: Supports flowcharts, sequence diagrams, class diagrams, and more
 
+### 📎 **Enhanced File Processing**
+- **Office Documents**: Excel (.xlsx, .xls), Word (.docx, .doc), PowerPoint analysis
+- **Data Formats**: CSV files with tabular analysis, JSON with formatting validation
+- **Configuration Files**: YAML (.yml, .yaml), XML with structure parsing
+- **Code Files**: JavaScript, Python, Java, C++, HTML, CSS, SQL, and more
+- **Documentation**: Markdown (.md), PDF text extraction, plain text files
+- **Media Files**: Images (JPG, PNG, GIF, WebP), Videos (MP4, MOV, AVI), Audio (MP3, WAV, M4A)
+- **Intelligent Processing**: Automatic format detection, data structure analysis, syntax highlighting
+- **Error Handling**: Robust timeout and retry logic, detailed error reporting
+- **Size Limits**: 30MB for documents, 100MB for videos, optimized download performance
+
 ### 🔐 **Security & Operations**
 - **Channel Authorization**: Redis-based access control system
 - **API Authentication**: Secured endpoints with key-based protection
@@ -124,8 +135,11 @@ CodeMarque AI Bot serves as your digital command center, providing:
    # Deploy slash commands to Discord
    node src/deploy-commands.js
    
-   # Launch the bot
+   # Launch the bot (development)
    npm start
+   
+   # Launch the bot (production with Docker Mermaid support)
+   npm run start:production
    ```
 
 ### **Channel Authorization**

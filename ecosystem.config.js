@@ -1,14 +1,14 @@
 module.exports = {
   apps: [{
     name: 'codemarque-bot',
-    script: './src/index.js',
+    script: './scripts/bot-wrapper.sh',
     instances: 1,
     exec_mode: 'fork',
     
     // Run with Docker group permissions
     interpreter: 'bash',
     interpreter_args: '-c',
-    script: 'sg docker -c "node ./src/index.js"',
+    script: 'sg docker -c "./scripts/bot-wrapper.sh"',
     
     // Environment variables
     env: {

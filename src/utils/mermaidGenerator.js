@@ -44,12 +44,29 @@ function generateMermaidDiagram(mermaidCode, theme = 'default', backgroundColor 
             '-o', `/data/${diagramName}.png`
         ];
         
-        // Add user mapping only if we can get the IDs (not in all environments)
+        // Add user mapping to ensure proper file permissions
         try {
+            let uid, gid;
+            
+            // Try multiple methods to get user IDs
             if (process.getuid && process.getgid) {
-                const uid = process.getuid();
-                const gid = process.getgid();
+                uid = process.getuid();
+                gid = process.getgid();
+            } else {
+                // Fallback: use shell commands to get IDs
+                try {
+                    uid = execSync('id -u', { encoding: 'utf8' }).trim();
+                    gid = execSync('id -g', { encoding: 'utf8' }).trim();
+                } catch {
+                    // Final fallback: use environment or default
+                    uid = process.env.UID || '1000';
+                    gid = process.env.GID || '1000';
+                }
+            }
+            
+            if (uid && gid) {
                 dockerCmd.splice(3, 0, '-u', `${uid}:${gid}`);
+                console.log(`[MERMAID] Using user mapping: ${uid}:${gid}`);
             }
         } catch {
             console.log('[MERMAID] Running without user mapping (normal in some environments)');
@@ -66,6 +83,7 @@ function generateMermaidDiagram(mermaidCode, theme = 'default', backgroundColor 
         }
         
         console.log(`[MERMAID] Generating diagram: ${diagramName}`);
+        console.log(`[MERMAID] Docker command: ${dockerCmd.join(' ')}`);
         
         try {
             // Execute the Docker command with timeout
@@ -74,27 +92,42 @@ function generateMermaidDiagram(mermaidCode, theme = 'default', backgroundColor 
                 timeout: 30000,
                 cwd: process.cwd()
             });
-        } catch {
-            // Check if Docker is available
-            try {
-                execSync('docker --version', { stdio: 'pipe' });
-            } catch {
-                return {
-                    success: false,
-                    error: 'Docker not available in this environment',
-                    inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
-                    troubleshooting: 'Mermaid diagram generation requires Docker. Install Docker or use online tools like https://mermaid.live for diagram generation.',
-                    fallbackSuggestion: 'You can copy the Mermaid code and use https://mermaid.live to generate diagrams manually.'
-                };
-            }
+        } catch (cmdError) {
+            console.error(`[MERMAID] Docker command failed:`, cmdError.message);
+            console.error(`[MERMAID] Command was: ${dockerCmd.join(' ')}`);
             
-            // Check if the Docker image exists and pull if needed
+            // Try alternative approach - use sg docker wrapper if available
             try {
-                execSync('docker image inspect minlag/mermaid-cli', { stdio: 'pipe' });
-            } catch {
+                const sgCmd = `sg docker -c "${dockerCmd.join(' ')}"`;
+                console.log(`[MERMAID] Retrying with sg docker wrapper: ${sgCmd}`);
+                execSync(sgCmd, { 
+                    stdio: 'pipe',
+                    timeout: 30000,
+                    cwd: process.cwd()
+                });
+            } catch (sgError) {
+                console.error(`[MERMAID] sg docker approach also failed:`, sgError.message);
+                
+                // Check if Docker is available
                 try {
-                    console.log('[MERMAID] Pulling minlag/mermaid-cli Docker image...');
-                    execSync('docker pull minlag/mermaid-cli', { stdio: 'pipe' });
+                    execSync('docker --version', { stdio: 'pipe' });
+                } catch {
+                    return {
+                        success: false,
+                        error: 'Docker not available in this environment',
+                        inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
+                        troubleshooting: 'Mermaid diagram generation requires Docker. Install Docker or use online tools like https://mermaid.live for diagram generation.',
+                        fallbackSuggestion: 'You can copy the Mermaid code and use https://mermaid.live to generate diagrams manually.'
+                    };
+                }
+                
+                // Check if the Docker image exists and pull if needed
+                try {
+                    execSync('docker image inspect minlag/mermaid-cli', { stdio: 'pipe' });
+                } catch {
+                    try {
+                        console.log('[MERMAID] Pulling minlag/mermaid-cli Docker image...');
+                        execSync('docker pull minlag/mermaid-cli', { stdio: 'pipe' });
                     // Retry the original command
                     execSync(dockerCmd.join(' '), { 
                         stdio: 'pipe',
@@ -108,6 +141,7 @@ function generateMermaidDiagram(mermaidCode, theme = 'default', backgroundColor 
                         inputSyntax: mermaidCode.substring(0, 100) + (mermaidCode.length > 100 ? '...' : ''),
                         troubleshooting: 'Could not pull minlag/mermaid-cli Docker image. Check internet connection and Docker daemon status.'
                     };
+                }
                 }
             }
         }

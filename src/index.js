@@ -152,6 +152,13 @@ const client = new Client({
 		Partials.Channel, // Required for DM support
 		Partials.Message  // Required for message events in DMs
 	],
+	// Enhanced WebSocket options for better connection stability
+	ws: {
+		timeout: 45000, // 45 second timeout
+		compress: false, // Disable compression to reduce connection issues
+		maxRetryAttempts: 5, // Increase retry attempts
+		retryDelay: 30000 // 30 second delay between retries
+	},
 	// Optimize cache settings for Discord bot performance
 	makeCache: Options.cacheWithLimits({
 		...Options.DefaultMakeCacheSettings,
@@ -597,22 +604,72 @@ async function processConversation({ message, messageContent, processedAttachmen
 		const botMessage = await message.reply(thinkingMessage);
 		await conversationManager.startTyping(message.author.id);
 
-		// Enhanced model response handling with retry logic
+		// Log content size before API call
+		if (Array.isArray(finalContent)) {
+			const totalTextSize = finalContent.reduce((total, part) => {
+				if (part.text) return total + part.text.length;
+				return total;
+			}, 0);
+			console.log(`[API DEBUG] Sending multimodal content: ${finalContent.length} parts, ${(totalTextSize/1024).toFixed(2)}KB total text`);
+		} else {
+			console.log(`[API DEBUG] Sending text content: ${(finalContent.length/1024).toFixed(2)}KB`);
+		}
+
+		// Enhanced model response handling with retry logic and streaming fallback
 		const apiCallWithRetry = async (retries = 3) => {
 			for (let attempt = 1; attempt <= retries; attempt++) {
 				try {
-					// Use streaming for all responses now
+					// Try streaming first
+					console.log(`[API CALL] Attempt ${attempt}/${retries} - Using streaming mode`);
 					return await chat.sendMessageStream(finalContent);
 				} catch (error) {
 					console.error(`[API RETRY] Attempt ${attempt}/${retries} failed:`, error.message);
+					console.error(`[API DEBUG] Full error object:`, error);
+					
+					// Special handling for streaming errors - try non-streaming fallback
+					const isStreamError = error.message.includes('stream') || 
+										error.message.includes('Error reading from the stream') || 
+										error.message.includes('[GoogleGenerativeAI Error]: Error reading from the stream') ||
+										error.message.includes('GoogleGenerativeAI Error');
+					
+					console.log(`[API FALLBACK CHECK] Stream error detected: ${isStreamError}, Error message: "${error.message}"`);
+					
+					if (isStreamError) {
+						console.log(`[API FALLBACK] Streaming failed, trying non-streaming mode...`);
+						try {
+							const nonStreamingResult = await chat.sendMessage(finalContent);
+							console.log(`[API FALLBACK] Non-streaming mode successful`);
+							// Convert to streaming-like format for compatibility
+							return {
+								stream: (async function* () {
+									yield { text: () => nonStreamingResult.response.text() };
+								})()
+							};
+						} catch (fallbackError) {
+							console.error(`[API FALLBACK] Non-streaming also failed:`, fallbackError.message);
+							if (attempt === retries) {
+								throw new Error('Both streaming and non-streaming API calls failed. Please try again or use a smaller file.');
+							}
+						}
+					}
 					
 					// Don't retry on certain errors
-					if (error.message.includes('SAFETY') || 
+					else if (error.message.includes('SAFETY') || 
 						error.message.includes('API_KEY') || 
 						error.message.includes('quota') || 
+						error.message.includes('content too large') ||
 						error.status === 429 || 
 						error.status === 400 ||
+						error.status === 413 ||
 						error.message.includes('maxOutputTokens')) {
+						
+						// Provide specific error messages for different scenarios
+						if (error.message.includes('content too large') || error.status === 413) {
+							throw new Error('Content too large for AI processing. Please try with a smaller file or ask for a summary of specific sections.');
+						} else if (error.message.includes('quota') || error.status === 429) {
+							throw new Error('API rate limit reached. Please wait a moment and try again.');
+						}
+						
 						throw error;
 					}
 					
