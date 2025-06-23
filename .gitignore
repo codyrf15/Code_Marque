@@ -9,6 +9,7 @@ yarn-error.log*
 .env.local
 .env.development.local
 .env.production.local
+.env.backup
 
 # Runtime files
 *.log
@@ -19,27 +20,30 @@ yarn-error.log*
 # Coverage directory used by tools like istanbul
 coverage/
 
-# Documentation and development files
-docs/
-screenshots/
+# Logs directory (recreated at runtime)
+logs/
+
+# Temporary files and directories
+temp/mermaid-diagrams/*.png
+temp/mermaid-diagrams/*.mmd
+temp/code-attachments/
 attached_assets/
-.roo/
-.taskmaster/
-.windsurfrules
-.roomodes
-.cursorignore
-.cursor/
-CLAUDE.md
-REVIEW_GATE_INSTALLATION.md
+*.tmp
+*.temp
+*~
+
+# Archive and development artifacts
+archive/
 get-pip.py
-env.example
+
+# Task Master data (workflow rules preserved in .cursor/rules/)
+.taskmaster/
 
 # IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS files
 .DS_Store
@@ -50,14 +54,19 @@ env.example
 ehthumbs.db
 Thumbs.db
 
-# Temporary files
-*.tmp
-*.temp
+# AI Assistant configuration (KEEP THESE - Essential for bot functionality)
+# .cursor/ - REMOVED from gitignore (contains essential rules)
+# .windsurfrules - REMOVED from gitignore (contains essential rules)  
+# .roomodes - REMOVED from gitignore (contains essential rules)
+# .roo/ - REMOVED from gitignore (contains essential rules)
+# CLAUDE.md - REMOVED from gitignore (essential documentation)
+
+# Testing files that shouldn't be ignored
+# docs/ - REMOVED from gitignore (essential documentation)
+# screenshots/ - REMOVED from gitignore (may contain important examples)
 
 # Added by Task Master AI
 # Logs
-logs
-*.log
 dev-debug.log
 # Dependency directories
 node_modules/
@@ -83,10 +92,8 @@ tasks/
 # Claude monitoring scripts
 # Note: Removed claude_monitor.sh as part of Gemini migration
 
-# Testing files
-
 # Internal development and coordination files (added for cleanup)
 .coordination/
-archive/
-test-assets/
-temp/mermaid-diagrams/*.png 
+
+# Testing files
+test-assets/ 
